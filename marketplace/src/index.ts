@@ -1,7 +1,6 @@
 import express from "express";
 import type { Request, Response } from "express";
 
-import bodyParser from "body-parser";
 import Database from "better-sqlite3";
 import path from "path";
 

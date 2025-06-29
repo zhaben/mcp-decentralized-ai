@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.55.0",
     "@modelcontextprotocol/sdk": "^1.13.2",
     "better-sqlite3": "^12.2.0",
     "body-parser": "^2.2.0",
