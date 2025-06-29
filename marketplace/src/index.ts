@@ -29,16 +29,9 @@ db.exec(`
   );
 `);
 
-const app = express();
-app.use(bodyParser.json());
-
 const mcpServer = new McpServer({
   name: "marketplace-server",
   version: "1.0.0",
-});
-
-const transport = new StreamableHTTPServerTransport({
-  sessionIdGenerator: undefined, // stateless
 });
 
 mcpServer.tool(
@@ -172,7 +165,8 @@ mcpServer.tool(
   }
 );
 
-// mcpServer.connect(transport);
+const app = express();
+app.use(express.json());
 
 app.post("/mcp", async (req, res) => {
   try {
@@ -191,6 +185,7 @@ app.post("/mcp", async (req, res) => {
     }
   }
 });
+
 
 app.post("/listings", (req: Request, res: Response) => {
   const { item_name, listed_price, ai_agent_address, owner_name } = req.body;
@@ -292,21 +287,66 @@ app.post("/offers/:id", (req: Request, res: Response) => {
   res.json({ message: `Offre ${action}ée` });
 });
 
-// const PORT = process.env.PORT || 3000;
-// app.listen(PORT, () => {
-//   console.log(`Server started on http://localhost:${PORT}`);
-// });
+const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: undefined, // set to undefined for stateless servers
+});
 
-const PORT = process.env.PORT || 3000;
-
-async function start() {
+// Setup routes for the server
+const setupServer = async () => {
   await mcpServer.connect(transport);
-  app.listen(PORT, () => {
-    console.log(`Server started on http://localhost:${PORT}`);
-  });
-}
+};
 
-start().catch((err) => {
-  console.error("Erreur au démarrage :", err);
+app.post('/mcp', async (req: Request, res: Response) => {
+  console.log('Received MCP request:', req.body);
+  try {
+      await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error('Error handling MCP request:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32603,
+          message: 'Internal server error',
+        },
+        id: null,
+      });
+    }
+  }
+});
+
+app.get('/mcp', async (req: Request, res: Response) => {
+  console.log('Received GET MCP request');
+  res.writeHead(405).end(JSON.stringify({
+    jsonrpc: "2.0",
+    error: {
+      code: -32000,
+      message: "Method not allowed."
+    },
+    id: null
+  }));
+});
+
+app.delete('/mcp', async (req: Request, res: Response) => {
+  console.log('Received DELETE MCP request');
+  res.writeHead(405).end(JSON.stringify({
+    jsonrpc: "2.0",
+    error: {
+      code: -32000,
+      message: "Method not allowed."
+    },
+    id: null
+  }));
+});
+
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+setupServer().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
+}).catch(error => {
+  console.error('Failed to set up the server:', error);
   process.exit(1);
 });
